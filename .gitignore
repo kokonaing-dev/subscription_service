@@ -1,0 +1,45 @@
+# Build / Publish Outputs
+bin/
+obj/
+publish/
+*.publish.xml
+
+# Rider / JetBrains IDE
+.idea/
+*.sln.iml
+
+# User-specific / OS files
+*.user
+*.userosscache
+*.suo
+*.vscode/
+*.DS_Store
+*.log
+
+
+# .NET Core / ASP.NET Core
+*.dbmdl
+*.dbproj.user
+*.efcore/
+secrets.json
+*.local.settings.json
+
+# NuGet
+*.nupkg
+packages/
+.nuget/
+
+# Docker / PostgreSQL
+docker-compose.override.yml
+*.sql
+*.sqlite
+*.db
+*.ldf
+*.mdf
+
+# Temporary / cache
+*.tmp
+*.temp
+*.bak
+*.swp
+*.lock.json
