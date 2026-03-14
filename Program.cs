@@ -6,14 +6,12 @@ using Microsoft.OData.ModelBuilder;
 using subscription_service.Data;
 using subscription_service.Models;
 using subscription_service.Services;
-using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Run API on port 8000 ---
 builder.WebHost.UseUrls("http://0.0.0.0:8000");
 
-// ---Configure PostgreSQL DbContext ---
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -46,17 +44,14 @@ builder.Services.AddControllers()
         }
     });
 
-// --- Configure Swagger---
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.ResolveConflictingActions(apiDescriptions => apiDescriptions.First());
 });
 
-// --- Build the app ---
 var app = builder.Build();
 
-// --- Middleware ---
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
