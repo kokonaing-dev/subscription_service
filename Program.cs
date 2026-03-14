@@ -5,6 +5,7 @@ using Microsoft.OData.Edm;
 using Microsoft.OData.ModelBuilder;
 using subscription_service.Data;
 using subscription_service.Models;
+using subscription_service.Services;
 using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,6 +16,15 @@ builder.WebHost.UseUrls("http://0.0.0.0:8000");
 // ---Configure PostgreSQL DbContext ---
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<IPaymentGatewayService, PaymentGatewayService>();
+builder.Services.AddScoped<IDiscountService, DiscountService>();
+builder.Services.AddScoped<IPlanService, PlanService>();
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+builder.Services.AddScoped<ISubscriptionTransactionService, SubscriptionTransactionService>();
+builder.Services.AddScoped<IGatewayRawEventService, GatewayRawEventService>();
+builder.Services.AddScoped<IUserAIPointService, UserAIPointService>();
+builder.Services.AddScoped<IAIPointTransactionService, AIPointTransactionService>();
 
 // --- Configure OData ---
 builder.Services.AddControllers()

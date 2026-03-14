@@ -12,13 +12,13 @@ public class Plan : BaseEntity
 
     public string Description { get; set; }
 
-    public decimal Price { get; set; }
+    public float Price { get; set; }
 
     public string Currency { get; set; } = "USD";
 
     public string PlanType { get; set; }
 
-    public decimal? TaxAmount { get; set; }
+    public float? TaxAmount { get; set; }
 
     public Guid? PaymentGatewayId { get; set; }
 

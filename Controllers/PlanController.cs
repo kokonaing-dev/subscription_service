@@ -3,19 +3,20 @@ using Microsoft.AspNetCore.OData.Deltas;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.OData.Routing.Controllers;
 using Microsoft.AspNetCore.OData.Results;
-using subscription_service.Data;
+using subscription_service.DTOs;
 using subscription_service.Models;
+using subscription_service.Services;
 
 namespace subscription_service.Controllers;
 
 [Route("odata/plans")]
 public class PlanController : ODataController
 {
-    private readonly AppDbContext _context;
+    private readonly IPlanService _service;
 
-    public PlanController(AppDbContext context)
+    public PlanController(IPlanService service)
     {
-        _context = context;
+        _service = service;
     }
 
 
@@ -30,7 +31,7 @@ public class PlanController : ODataController
         [FromQuery(Name = "$top")] int? top = null,
         [FromQuery(Name = "$skip")] int? skip = null)
     {
-        return _context.Plans;
+        return _service.Query();
     }
 
     // GET single
@@ -38,20 +39,19 @@ public class PlanController : ODataController
     [EnableQuery]
     public SingleResult<Plan> Get([FromRoute] Guid key)
     {
-        return SingleResult.Create(_context.Plans.Where(p => p.Id == key));
+        return SingleResult.Create(_service.Query().Where(p => p.Id == key));
     }
 
     // POST
     [HttpPost]
-    public async Task<IActionResult> Post([FromBody] Plan plan)
+    public async Task<IActionResult> Post([FromBody] PlanCreateDto dto)
     {
-        if (plan == null)
+        if (dto == null)
         {
             return BadRequest("Request body could not be deserialized. Ensure Content-Type is application/json and the JSON matches the Plan model.");
         }
 
-        _context.Plans.Add(plan);
-        await _context.SaveChangesAsync();
+        var plan = await _service.CreateAsync(dto);
         return Created(plan);
     }
 
@@ -59,10 +59,13 @@ public class PlanController : ODataController
     [HttpPatch("{key}")]
     public async Task<IActionResult> Patch([FromRoute] Guid key, [FromBody] Delta<Plan> delta)
     {
-        var entity = await _context.Plans.FindAsync(key);
+        if (delta == null)
+        {
+            return BadRequest("Request body is null or invalid.");
+        }
+
+        var entity = await _service.PatchAsync(key, delta);
         if (entity == null) return NotFound();
-        delta.Patch(entity);
-        await _context.SaveChangesAsync();
         return Updated(entity);
     }
 
@@ -70,10 +73,8 @@ public class PlanController : ODataController
     [HttpDelete("{key}")]
     public async Task<IActionResult> Delete([FromRoute] Guid key)
     {
-        var entity = await _context.Plans.FindAsync(key);
-        if (entity == null) return NotFound();
-        _context.Plans.Remove(entity);
-        await _context.SaveChangesAsync();
+        var deleted = await _service.DeleteAsync(key);
+        if (!deleted) return NotFound();
         return NoContent();
     }
 }

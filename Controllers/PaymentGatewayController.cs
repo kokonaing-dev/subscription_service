@@ -3,19 +3,20 @@ using Microsoft.AspNetCore.OData.Deltas;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.OData.Routing.Controllers;
 using Microsoft.AspNetCore.OData.Results;
-using subscription_service.Data;
+using subscription_service.DTOs;
 using subscription_service.Models;
+using subscription_service.Services;
 
 namespace subscription_service.Controllers;
 
 [Route("odata/payment-gateways")]
 public class PaymentGatewayController : ODataController
 {
-    private readonly AppDbContext _context;
+    private readonly IPaymentGatewayService _service;
 
-    public PaymentGatewayController(AppDbContext context)
+    public PaymentGatewayController(IPaymentGatewayService service)
     {
-        _context = context;
+        _service = service;
     }
 
     // GET collection
@@ -29,7 +30,7 @@ public class PaymentGatewayController : ODataController
         [FromQuery(Name = "$top")] int? top = null,
         [FromQuery(Name = "$skip")] int? skip = null)
     {
-        return _context.PaymentGateways;
+        return _service.Query();
     }
 
     // GET single
@@ -37,19 +38,18 @@ public class PaymentGatewayController : ODataController
     [EnableQuery]
     public SingleResult<PaymentGateway> Get([FromRoute] Guid key)
     {
-        return SingleResult.Create(_context.PaymentGateways.Where(e => e.Id == key));
+        return SingleResult.Create(_service.Query().Where(e => e.Id == key));
     }
 
     // POST
     [HttpPost]
-    public async Task<IActionResult> Post([FromBody] PaymentGateway entity)
+    public async Task<IActionResult> Post([FromBody] PaymentGatewayCreateDto dto)
     {
-        if (entity == null)
+        if (dto == null)
         {
             return BadRequest("Request body is null or invalid.");
         }
-        _context.PaymentGateways.Add(entity);
-        await _context.SaveChangesAsync();
+        var entity = await _service.CreateAsync(dto);
         return Created(entity);
     }
 
@@ -57,14 +57,16 @@ public class PaymentGatewayController : ODataController
     [HttpPatch("{key}")]
     public async Task<IActionResult> Patch([FromRoute] Guid key, [FromBody] Delta<PaymentGateway> delta)
     {
-        var entity = await _context.PaymentGateways.FindAsync(key);
+        if (delta == null)
+        {
+            return BadRequest("Request body is null or invalid.");
+        }
+
+        var entity = await _service.PatchAsync(key, delta);
         if (entity == null)
         {
             return NotFound();
         }
-
-        delta.Patch(entity);
-        await _context.SaveChangesAsync();
 
         return Updated(entity);
     }
@@ -73,14 +75,11 @@ public class PaymentGatewayController : ODataController
     [HttpDelete("{key}")]
     public async Task<IActionResult> Delete([FromRoute] Guid key)
     {
-        var entity = await _context.PaymentGateways.FindAsync(key);
-        if (entity == null)
+        var deleted = await _service.DeleteAsync(key);
+        if (!deleted)
         {
             return NotFound();
         }
-
-        _context.PaymentGateways.Remove(entity);
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }

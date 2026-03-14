@@ -3,19 +3,20 @@ using Microsoft.AspNetCore.OData.Deltas;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.OData.Routing.Controllers;
 using Microsoft.AspNetCore.OData.Results;
-using subscription_service.Data;
+using subscription_service.DTOs;
 using subscription_service.Models;
+using subscription_service.Services;
 
 namespace subscription_service.Controllers;
 
 [Route("odata/gateway-raw-events")]
 public class GatewayRawEventController : ODataController
 {
-    private readonly AppDbContext _context;
+    private readonly IGatewayRawEventService _service;
 
-    public GatewayRawEventController(AppDbContext context)
+    public GatewayRawEventController(IGatewayRawEventService service)
     {
-        _context = context;
+        _service = service;
     }
 
     // GET collection
@@ -29,7 +30,7 @@ public class GatewayRawEventController : ODataController
         [FromQuery(Name = "$top")] int? top = null,
         [FromQuery(Name = "$skip")] int? skip = null)
     {
-        return _context.GatewayRawEvents;
+        return _service.Query();
     }
 
     // GET single
@@ -37,19 +38,18 @@ public class GatewayRawEventController : ODataController
     [EnableQuery]
     public SingleResult<GatewayRawEvent> Get([FromRoute] Guid key)
     {
-        return SingleResult.Create(_context.GatewayRawEvents.Where(e => e.Id == key));
+        return SingleResult.Create(_service.Query().Where(e => e.Id == key));
     }
 
     // POST
     [HttpPost]
-    public async Task<IActionResult> Post([FromBody] GatewayRawEvent entity)
+    public async Task<IActionResult> Post([FromBody] GatewayRawEventCreateDto dto)
     {
-        if (entity == null)
+        if (dto == null)
         {
             return BadRequest("Request body is null or invalid.");
         }
-        _context.GatewayRawEvents.Add(entity);
-        await _context.SaveChangesAsync();
+        var entity = await _service.CreateAsync(dto);
         return Created(entity);
     }
 
@@ -57,14 +57,16 @@ public class GatewayRawEventController : ODataController
     [HttpPatch("{key}")]
     public async Task<IActionResult> Patch([FromRoute] Guid key, [FromBody] Delta<GatewayRawEvent> delta)
     {
-        var entity = await _context.GatewayRawEvents.FindAsync(key);
+        if (delta == null)
+        {
+            return BadRequest("Request body is null or invalid.");
+        }
+
+        var entity = await _service.PatchAsync(key, delta);
         if (entity == null)
         {
             return NotFound();
         }
-
-        delta.Patch(entity);
-        await _context.SaveChangesAsync();
 
         return Updated(entity);
     }
@@ -73,14 +75,11 @@ public class GatewayRawEventController : ODataController
     [HttpDelete("{key}")]
     public async Task<IActionResult> Delete([FromRoute] Guid key)
     {
-        var entity = await _context.GatewayRawEvents.FindAsync(key);
-        if (entity == null)
+        var deleted = await _service.DeleteAsync(key);
+        if (!deleted)
         {
             return NotFound();
         }
-
-        _context.GatewayRawEvents.Remove(entity);
-        await _context.SaveChangesAsync();
 
         return NoContent();
     }
